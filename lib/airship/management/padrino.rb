@@ -7,23 +7,23 @@ module Airship
 
       module ClassMethods
         def index(options = {}, &block)
-          get :index, "", options, &block
+          route 'GET', "", options, &block
         end
 
         def show(options = {}, &block)
-          get :show, ":id", options, &block
+          route 'GET', ":id", options, &block
         end
 
         def edit(options = {}, &block)
-          get :edit, ":id/edit", options, &block
+          route 'GET', ":id/edit", options, &block
         end
 
         def update(options = {}, &block)
-          post :update, ":id/update", options, &block
+          route 'POST', ":id/update", options, &block
         end
 
         def destroy(options = {}, &block)
-          delete :destroy, ":id/destroy", options, &block
+          route 'DELETE', ":id/destroy", options, &block
         end
       end
     end
