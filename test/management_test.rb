@@ -43,7 +43,7 @@ describe Airship::Management do
     describe :routing do
       before do
         mock_app do
-          register Airship::Management::Sinatra
+          register Airship::Management::Padrino
 
           index { "index!" }
           show { "show #{params[:id]}" }
