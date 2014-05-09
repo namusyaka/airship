@@ -1,6 +1,9 @@
 module Airship
   module Extensions
     module Padrino
+      ##
+      # Airship::Extensions::Padrino separates methods of Padrino::Routing to convenient size.
+
       ROUTE_PRIORITY = {:high => 0, :normal => 1, :low => 2} unless defined?(ROUTE_PRIORITY)
 
       def route(verb, path, *args, &block)
