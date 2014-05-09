@@ -1,0 +1,20 @@
+lang: ruby
+before_install: gem install bundler --pre
+install:
+  - gem update --system
+  - bundle update
+rvm:
+  - 2.0.0
+  - 2.1.0
+  - jruby-head
+  - rbx
+notifications:
+  recipients:
+    - namusyaka@gmail.com
+branches:
+  only:
+    - master
+matrix:
+  allow_failures:
+    - rvm: rbx
+    - rvm: jruby-head

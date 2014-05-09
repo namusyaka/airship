@@ -1,0 +1,94 @@
+module Airship
+  module Extensions
+    module Padrino
+      ROUTE_PRIORITY = {:high => 0, :normal => 1, :low => 2} unless defined?(ROUTE_PRIORITY)
+
+      def route(verb, path, *args, &block)
+        options = extract_options(args)
+        route_options = build_route_options(options)
+        path, *route_options[:with] = path if path.is_a?(Array)
+        path, name, route_parents, options, route_options = *parse_route(path, route_options, verb)
+        options.reverse_merge!(@_condition) if @_condition
+        block = generate_block(verb, path, options, block)
+        invoke_hook(:route_added, verb, path, block)
+        setup_route!(verb, path, name, route_parents, route_options, args, **options, &block)
+      end
+
+      private
+
+      def generate_unbound_method(verb, path, options, &block)
+        method_name = "#{verb} #{path}"
+        generate_method(method_name, &block)
+      end
+
+      def generate_block(verb, path, options, block)
+        unbound_method = generate_unbound_method(verb, path, options, &block)
+        unbound_method.arity != 0 ?
+          proc{|a, p| unbound_method.bind(a).call(*p) } :
+          proc{|a, p| unbound_method.bind(a).call }
+      end
+
+      def setup_route!(verb, path, name, route_parents, route_options, args, **options, &block)
+        route = router.add(path, route_options)
+        route.name = name if name
+        route.host = options.delete(:host) if options.key?(:host)
+        route.user_agent = options.delete(:agent) if options.key?(:agent)
+        route.action = options[:action]
+        priority_name = options.delete(:priority) || :normal
+        priority = ROUTE_PRIORITY[priority_name] or raise("Priority #{priority_name} not recognized, try #{ROUTE_PRIORITY.keys.join(', ')}")
+        route.cache = options.key?(:cache) ? options.delete(:cache) : @_cache
+        route.parent = route_parents ? (route_parents.count == 1 ? route_parents.first : route_parents) : route_parents
+        route.add_request_method(verb.downcase.to_sym)
+        if options.key?(:default_values)
+          defaults = options.delete(:default_values)
+          route.add_default_values(defaults) if defaults
+        end
+        options.delete_if do |option, _args|
+          if route.significant_variable_names.include?(option)
+            route.add_match_with(option => Array(_args).first)
+            true
+          end
+        end
+        options.each{|o, a| route.respond_to?(o) ? route.send(o, *a) : send(o, *a) }
+        conditions, @conditions = @conditions, []
+        route.custom_conditions.concat(conditions)
+        invoke_hook(:padrino_route_added, route, verb, path, args, options, block)
+        route.before_filters << @filters[:before]
+        route.after_filters << @filters[:after]
+        if @_controller
+          route.use_layout = @layout
+          route.controller = Array(@_controller).join('/')
+        end
+        deferred_routes[priority] << [route, block]
+        route
+      end
+
+      def build_route_options(options)
+        route_options = options.dup
+        [:provides, :accepts].each{|name|
+          (var = instance_variable_get(:"@_#{name}")) && (route_options[name] = var) }
+        unless route_options.has_key?(:csrf_protection)
+          route_options[:csrf_protection] = true
+        end if protect_from_csrf && (report_csrf_failure || allow_disabled_csrf)
+        route_options
+      end
+
+      def extract_options(args)
+        case args.size
+        when 2
+          args.last.merge(map: args.first)
+        when 1
+          map = args.shift if args.first.is_a?(String)
+          if args.first.is_a?(Hash)
+            map ? args.first.merge(map: map) : args.first
+          else
+            { map: map || args.first }
+          end
+        when 0
+          {}
+        else raise
+        end
+      end
+    end
+  end
+end
