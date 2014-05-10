@@ -1,5 +1,7 @@
 # Airship
 
+[![Build Status](https://travis-ci.org/namusyaka/airship.svg)](https://travis-ci.org/namusyaka/airship)
+
 Airship is the Sinatra/Padrino extension.
 
 ## Installation
